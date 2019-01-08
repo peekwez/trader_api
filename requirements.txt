@@ -4,6 +4,7 @@ amqp==2.3.2
 aniso8601==4.0.1
 asn1crypto==0.24.0
 astor==0.7.1
+Babel==2.6.0
 backports-abc==0.5
 backports.shutil-get-terminal-size==1.0.0
 backports.ssl-match-hostname==3.5.0.1
@@ -11,6 +12,7 @@ backports.weakref==1.0.post1
 bcrypt==3.1.5
 billiard==3.5.0.5
 bleach==3.0.2
+blinker==1.4
 celery==4.2.1
 certifi==2018.11.29
 cffi==1.11.5
@@ -27,6 +29,7 @@ enum34==1.1.6
 fabric==2.4.0
 fix-yahoo-finance==0.0.22
 Flask==1.0.2
+Flask-Babel==0.12.2
 flask-marshmallow==0.9.0
 Flask-Migrate==2.3.1
 Flask-RESTful==0.3.7
@@ -93,6 +96,8 @@ pytz==2018.7
 PyYAML==3.13
 pyzmq==16.0.4
 qtconsole==4.4.3
+rabbitmq==0.2.0
+redis==3.0.1
 requests==2.21.0
 scandir==1.9.0
 scipy==1.2.0
@@ -101,6 +106,7 @@ simplegeneric==0.8.1
 singledispatch==3.4.0.3
 six==1.12.0
 SQLAlchemy==1.2.15
+SQLAlchemy-Utils==0.33.10
 tensorboard==1.12.2
 tensorflow==1.12.0
 termcolor==1.1.0

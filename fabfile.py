@@ -1,5 +1,4 @@
 # _*_ coding: utf-8 -*-
-from __future__ import absolute_import
 
 import os
 import sys
@@ -27,4 +26,29 @@ def freeze(c):
 def install(c,name):
     with envwrapper(c):
         results = c.run('pip install {0} '.format(name))
-        if results.exited is 0: add2list(c)
+        if results.exited is 0: freeze(c)
+
+@task
+def server(c,env="development"):
+    with envwrapper(c):
+        command  = "export FLASK_ENV={0}".format(env)
+        command += " && python run.py"
+        c.run(command)
+
+@task
+def initdb(c):
+    with envwrapper(c):
+        c.run("rm -fr app.db migrations/")
+        c.run("python migrate.py db init")
+
+@task
+def migratedb(c):
+    with envwrapper(c):
+        command  = "python migrate.py db migrate"
+        c.run(command)
+
+@task
+def updatedb(c):
+    with envwrapper(c):
+        command  = "python migrate.py db upgrade"
+        c.run(command)

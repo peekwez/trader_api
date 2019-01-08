@@ -15,3 +15,6 @@ build/
 
 *.ipynb
 *.ipynb_checkpoints/
+
+*.pid
+*celerybeat-schedule
