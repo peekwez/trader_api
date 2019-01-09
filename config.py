@@ -7,7 +7,12 @@ from kombu import Exchange, Queue
 from constants import UPDATE_TIME
 
 # app config
-VERSION = 'v1'
+APP_NAME = "trader"
+VERSION = "v1"
+URL_PREFIX = "/{0}/api/{1}".format(
+    APP_NAME, VERSION
+)
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 JSON_SORT_KEYS = False
 

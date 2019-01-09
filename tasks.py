@@ -13,16 +13,16 @@ logger = get_task_logger(__name__)
 
 class EmptyDataFrameException(Exception):
     def __init__(self,message,errors):
-        super(EmptyDataFrameException,self).__init__(message)
+        super(EmptyDataFrameException,self).__init__(message,errors)
 
 
 class UpdateDabaseException(Exception):
     def __init__(self,message,errors):
-        super(UpdateDabaseException,self).__init__(message)
+        super(UpdateDabaseException,self).__init__(message,errors)
 
 
 class EmptyTickersException(Exception):
-    def __init__(self,message,errors):
+    def __init__(self,message):
         super(UpdateDabaseException,self).__init__(message)
 
 
@@ -34,16 +34,22 @@ def add_prices(self,full,tickers=None):
 
     try:
         if len(tickers) == 0 or tickers is None:
-            result = {"errors":-1,"message":"No tickers to update"}
+            result = {"errors":-1,"message":"No tickers provided"}
             raise EmptyTickersException(result["message"])
 
         result = update_prices(full,tickers)
 
         if result["errors"] < 0:
-            raise  EmptyDataFrameException(result["message"])
+            raise  EmptyDataFrameException(
+                "Empty data returned",
+                result["message"]
+            )
 
         elif result["errors"] > 0:
-            raise  UpdateDabaseException(result["message"])
+            raise  UpdateDabaseException(
+                "Datase update failed",
+                result["message"]
+            )
 
     except (EmptyTickersException) as error:
         logger.warning(error)
@@ -63,13 +69,16 @@ def add_prices(self,full,tickers=None):
     return result
 
 
-def add_full_prices(full,tickers=None):
+
+@app.task
+def add_ticker_prices(full,tickers=None):
 
     from celery import group
     if tickers is None:
         tickers =  get_tickers()
 
-    chunks = get_chunks(tickers,10)
+    nchunks = 10 if full else 50
+    chunks = get_chunks(tickers,nchunks)
     job = group(
         add_prices.s(full,tickers=chunk) for chunk in chunks
     )

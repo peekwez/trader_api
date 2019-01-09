@@ -8,7 +8,9 @@ from pandas_datareader import data as pdr
 from datetime import datetime, timedelta, time
 import fix_yahoo_finance as yf
 
+
 date = lambda x: datetime.strptime(x,'%Y-%m-%d')
+
 
 def add_price_params(parser):
 
@@ -30,6 +32,7 @@ def add_price_params(parser):
 
     return parser
 
+
 def comp(a,b,ops=None):
 
     # compare filters
@@ -44,6 +47,7 @@ def comp(a,b,ops=None):
     else:
         return a == b
 
+
 def get_ticker_filters(args):
 
     # get filter for tickers
@@ -55,6 +59,7 @@ def get_ticker_filters(args):
             bools += columns[key](value),
 
     return bools
+
 
 def get_price_filters(args):
 

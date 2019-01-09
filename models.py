@@ -26,6 +26,7 @@ class Ticker(db.Model):
         (u"index",_(u"Index")),
     )
 
+
     __tablename__ = "tickers"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -33,6 +34,7 @@ class Ticker(db.Model):
     symbol = db.Column(db.String(50), unique=True, nullable=False)
     sector = db.Column(db.String(250), nullable=True)
     industry = db.Column(db.String(250), nullable=True)
+    exchange = db.Column(db.String(50),nullable=True)
     market = db.Column(
         ChoiceType(MARKETS),
         nullable=False
@@ -108,14 +110,15 @@ class TickerSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True, validate=validate.Length(1))
     symbol = fields.String(required=True, validate=validate.Length(1))
-    sector = fields.String(validate=validate.Length(1))
-    industry = fields.String(validate=validate.Length(1))
+    sector = fields.String(validate=validate.Length(1), allow_none=True)
+    industry = fields.String(validate=validate.Length(1), allow_none=True)
+    exchange = fields.String(validate=validate.Length(1), allow_none=True)
     market = fields.String(required=True, validate=validate.Length(1))
     type = fields.String(required=True, validate=validate.Length(1))
 
     class Meta:
         fields = (
-            "name", "symbol", "type",
+            "name", "exchange","symbol", "type",
             "market","sector","industry",
         )
         ordered = True

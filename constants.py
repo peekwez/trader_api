@@ -4,6 +4,7 @@ from models import Price, Ticker
 
 import datetime
 
+
 OPERATORS = (
     "",
     "__gt",
@@ -31,3 +32,24 @@ PRICE_COLUMNS = {
 }
 
 UPDATE_TIME = datetime.time(23,0,0)
+
+TICKER_LIST = {
+    "filename": "assets/tickers.xls",
+    "sheets": (
+        "nasdaq","nyse","amex","tmx",
+    ),
+    "columns":(
+        "Name","Exchange","Symbol",
+        "Sector","Industry","Value",
+    )
+}
+
+CA_LIMIT = 150*1e6 # 150 million - Canada
+US_LIMIT = 300*1e6 # 300 million - US
+
+VALUATION_LIMIT = {
+    "nasdaq": US_LIMIT,
+    "nyse": US_LIMIT,
+    "amex": US_LIMIT,
+    "tmx": CA_LIMIT,
+}

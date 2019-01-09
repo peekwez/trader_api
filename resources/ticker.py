@@ -13,6 +13,7 @@ parser = reqparse.RequestParser()
 parser = parser.add_argument("symbol",type=str)
 parser = parser.add_argument("sector",type=str)
 parser = parser.add_argument("industry",type=str)
+parser = parser.add_argument("exchange",type=str)
 parser = parser.add_argument("market",type=str)
 parser = parser.add_argument("type",type=str)
 
@@ -34,15 +35,14 @@ class TickerResource(Resource):
         if not json_data:
             return {'message': 'No input data provided'},400
 
-        # validte amd deserialize input
+        # validate and deserialize input
         data, errors = tickers_schema.load(json_data)
         if errors:
             return errors,422
 
-        # check if any of tickers already for existences
+        # check if any of tickers already exists
         items = [(item["symbol"],) for item in data]
         tickers = Ticker.query.filter(Ticker.symbol.in_(items)).all()
-
 
 
         # if any of the tickers exist don't pass; all or nothing

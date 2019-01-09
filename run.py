@@ -6,7 +6,7 @@ from flask import Flask
 from flask_babel import Babel
 from celery import Celery
 from flask_sqlalchemy import models_committed
-from models import Ticker
+from signals import post_models_committed
 
 def make_celery(app):
     celery = Celery(
@@ -31,37 +31,30 @@ def create_app(config_file):
     app = Flask(__name__)
     app.config.from_object(config_file)
 
+    # babel
     babel = Babel(app)
 
+    # register api
     from app import trader
-    vers = app.config['VERSION']
     app.register_blueprint(
         trader,
-        url_prefix='/trader/api/{0}'.format(vers)
+        url_prefix= app.config["URL_PREFIX"]
     )
 
+    # initialize db
     from models import db
     db.init_app(app)
 
     app.config['JSON_SORT_KEYS'] = False
+
+    # add signals
+    models_committed.connect(post_models_committed,app)
+
     return app
 
 app = create_app("config")
 celery = make_celery(app)
 
-
-@models_committed.connect_via(app)
-def on_models_committed(sender, changes):
-    tickers = []
-    for model, change in changes:
-        if isinstance(model,Ticker):
-            if hasattr(model,'__commit_insert__') and change == "insert":
-                ticker = model.__commit_insert__()
-                tickers.append(ticker)
-
-    if tickers:
-        from tasks import add_full_prices
-        add_full_prices(True,tickers)
 
 if __name__ == "__main__":
     app.run(debug=True)

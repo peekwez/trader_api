@@ -52,3 +52,27 @@ def updatedb(c):
     with envwrapper(c):
         command  = "python migrate.py db upgrade"
         c.run(command)
+
+@task
+def dropdb(c):
+    with envwrapper(c):
+        command = "python migrate.py db downgrade"
+        c.run(command)
+
+@task
+def taskworker(c):
+    with envwrapper(c):
+        command = "celery worker -A tasks.app -l info"
+        c.run(command)
+
+@task
+def taskbeat(c):
+    with envwrapper(c):
+        command = "celery beat -A tasks.app -l info"
+        c.run(command)
+
+@task
+def pgadmin(c):
+    with envwrapper(c):
+        command = "python ~/.virtualenvs/trader/lib/python2.7/site-packages/pgadmin4/pgAdmin4.py"
+        c.run(command)
