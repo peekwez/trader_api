@@ -5,8 +5,6 @@ warnings.simplefilter(action="ignore", category=Warning)
 from flask import Flask
 from flask_babel import Babel
 from celery import Celery
-from flask_sqlalchemy import models_committed
-from signals import post_models_committed
 
 def make_celery(app):
     celery = Celery(
@@ -47,14 +45,11 @@ def create_app(config_file):
 
     app.config['JSON_SORT_KEYS'] = False
 
-    # add signals
-    models_committed.connect(post_models_committed,app)
-
     return app
 
+# initialize app and celery
 app = create_app("config")
 celery = make_celery(app)
-
 
 if __name__ == "__main__":
     app.run(debug=True)

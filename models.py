@@ -56,9 +56,6 @@ class Ticker(db.Model):
     def __repr__(self):
         return '<Ticker: {0} - {1}>'.format(self.name,self.symbol)
 
-    def __commit_insert__(self):
-        return (self.id,self.symbol)
-
 
 class Price(db.Model):
 

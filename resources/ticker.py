@@ -6,6 +6,8 @@ from models import db, Ticker, TickerSchema
 from utils import get_ticker_filters
 from sqlalchemy import tuple_
 
+from signals import after_post_tickers
+
 tickers_schema = TickerSchema(many=True)
 ticker_schema = TickerSchema()
 
@@ -57,6 +59,9 @@ class TickerResource(Resource):
         # add tickers and commit
         db.session.add_all(tickers)
         db.session.commit()
+
+        # emit signal
+        after_post_tickers.send(self,tickers=tickers)
 
         # return results
         result = tickers_schema.dump(tickers).data

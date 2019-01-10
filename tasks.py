@@ -63,8 +63,11 @@ def add_prices(self,full,tickers=None):
     else:
         typestr = "Full" if full else "Latest"
         symbols = [sym for _,sym in tickers]
-        names = ','.join(symbols) if full else "_ALL_"
-        logger.info("{0} update for <{1}> tickers passed....".format(typestr,names))
+        names = ','.join(symbols)
+        msg = "{0} update for <{1}> tickers passed....".format(
+            typestr,names
+        )
+        result["message"] = msg
 
     return result
 

@@ -1,15 +1,12 @@
 # _*_ coding: utf-8 -*-
 
-from models import Ticker, Price
+from blinker import signal
 
-def post_models_committed(sender, changes):
-    tickers = []
-    for model, change in changes:
-        if isinstance(model,Ticker):
-            if hasattr(model,'__commit_insert__') and change == "insert":
-                ticker = model.__commit_insert__()
-                tickers.append(ticker)
+after_post_tickers = signal('after-post-tickers')
 
-    if tickers:
-        from tasks import add_ticker_prices
-        add_ticker_prices(full=True,tickers=tickers)
+@after_post_tickers.connect
+def download_prices(sender,**kwargs):
+    from tasks import add_ticker_prices
+    tickers = kwargs.get("tickers")
+    tickers = [(tk.id,tk.symbol) for tk in tickers]
+    add_ticker_prices(full=True,tickers=tickers)

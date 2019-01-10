@@ -45,7 +45,7 @@ TICKER_LIST = {
 }
 
 CA_LIMIT = 150*1e6 # 150 million - Canada
-US_LIMIT = 300*1e6 # 300 million - US
+US_LIMIT = 300*1e6 # 300 million - United States
 
 VALUATION_LIMIT = {
     "nasdaq": US_LIMIT,
