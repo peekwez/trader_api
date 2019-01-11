@@ -4,12 +4,10 @@ from flask import Flask
 from celery.utils.log import get_task_logger
 
 from run import celery as app
-from utils import get_chunks, get_tickers, update_prices
-
-import functools
+from utils import (get_chunks, get_dates, update_logs,
+                   get_tickers, update_prices)
 
 logger = get_task_logger(__name__)
-
 
 class EmptyDataFrameException(Exception):
     def __init__(self,message,errors):
@@ -21,23 +19,12 @@ class UpdateDabaseException(Exception):
         super(UpdateDabaseException,self).__init__(message,errors)
 
 
-class EmptyTickersException(Exception):
-    def __init__(self,message):
-        super(UpdateDabaseException,self).__init__(message)
-
-
 @app.task(bind=True)
-def add_prices(self,full,tickers=None):
+def add_prices(self,tickers,start_date,end_date):
 
-    if tickers is None:
-        tickers =  get_tickers()
-
+    # try and catch error
     try:
-        if len(tickers) == 0 or tickers is None:
-            result = {"errors":-1,"message":"No tickers provided"}
-            raise EmptyTickersException(result["message"])
-
-        result = update_prices(full,tickers)
+        result = update_prices(tickers, start_date, end_date)
 
         if result["errors"] < 0:
             raise  EmptyDataFrameException(
@@ -47,12 +34,9 @@ def add_prices(self,full,tickers=None):
 
         elif result["errors"] > 0:
             raise  UpdateDabaseException(
-                "Datase update failed",
+                "Database update failed",
                 result["message"]
             )
-
-    except (EmptyTickersException) as error:
-        logger.warning(error)
 
     except (EmptyDataFrameException) as error:
         raise self.retry(exc=error, max_retries=5)
@@ -61,28 +45,43 @@ def add_prices(self,full,tickers=None):
         logger.error(error)
 
     else:
-        typestr = "Full" if full else "Latest"
         symbols = [sym for _,sym in tickers]
         names = ','.join(symbols)
-        msg = "{0} update for <{1}> tickers passed....".format(
-            typestr,names
+        msg = "{0} to {1} update for <{2}> tickers passed..".format(
+            start_date,end_date,names
         )
         result["message"] = msg
 
     return result
 
 
-
-@app.task
-def add_ticker_prices(full,tickers=None):
+@app.task(bind=True,ignore_result=True)
+def add_chunked_prices(self,on_commit=False,tickers=None):
 
     from celery import group
+
+    # get tickers if none provided
     if tickers is None:
         tickers =  get_tickers()
 
-    nchunks = 10 if full else 50
+    # get start and end dates
+    start_date, end_date = get_dates(on_commit)
+
+    # chunk tickers in groups of 10 or 15
+    nchunks = 10 if on_commit else 15
     chunks = get_chunks(tickers,nchunks)
+
+    # group all jobs and submit to queue
     job = group(
-        add_prices.s(full,tickers=chunk) for chunk in chunks
+        add_prices.s(
+            chunk,
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d")
+        ) for chunk in chunks
     )
+
+    # run jobs
     result = job.apply_async()
+
+    # add update date to logs only once()
+    update_logs(end_date,self.request.id)

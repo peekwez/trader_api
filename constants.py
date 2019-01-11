@@ -6,7 +6,7 @@ import datetime
 
 
 OPERATORS = (
-    "",
+    "__eq",
     "__gt",
     "__gte",
     "__lt",
@@ -31,7 +31,7 @@ PRICE_COLUMNS = {
     "volume":Price.volume,
 }
 
-UPDATE_TIME = datetime.time(23,0,0)
+UPDATE_TIME = datetime.time(7,30,0)
 
 TICKER_LIST = {
     "filename": "assets/tickers.xls",
@@ -53,3 +53,10 @@ VALUATION_LIMIT = {
     "amex": US_LIMIT,
     "tmx": CA_LIMIT,
 }
+
+BANNER  = "\n  Trader Ipython Shell\n"
+BANNER += 25*"-" + "\n"
+BANNER += " App     :: app, db \n"
+BANNER += " Models  :: Ticker, Price, UpdatesLog \n"
+BANNER += " Tasks   :: add_prices, add_ticker_prices \n"
+BANNER += " Modules :: utils \n"

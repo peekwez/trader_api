@@ -3,17 +3,17 @@
 from flask import Flask
 from marshmallow import fields, post_dump, validate
 from flask_marshmallow import Marshmallow
-from flask_sqlalchemy import SQLAlchemy, models_committed
-from sqlalchemy import event
+from flask_sqlalchemy import SQLAlchemy
 from flask_babel import lazy_gettext as _
-from datetime import datetime
 from sqlalchemy_utils import ChoiceType
 
 from itertools import groupby
+from datetime import datetime
 
 ma = Marshmallow()
 db = SQLAlchemy()
 
+# schema models
 class Ticker(db.Model):
 
     MARKETS = (
@@ -83,6 +83,16 @@ class Price(db.Model):
         return '<Price: {0} - OHLC>'.format(self.ticker.symbol)
 
 
+class UpdatesLog(db.Model):
+    __tablename__ = "updates_log"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    date = db.Column(db.DateTime,nullable=False)
+    task_id = db.Column(db.String(250), nullable=True)
+
+
+
+# schema serializers
 class TickerPrices(object):
     def __init__(self,ticker,prices):
         self.ticker = ticker

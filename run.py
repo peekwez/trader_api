@@ -2,6 +2,7 @@
 
 import warnings
 warnings.simplefilter(action="ignore", category=Warning)
+
 from flask import Flask
 from flask_babel import Babel
 from celery import Celery

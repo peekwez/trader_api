@@ -6,7 +6,7 @@ after_post_tickers = signal('after-post-tickers')
 
 @after_post_tickers.connect
 def download_prices(sender,**kwargs):
-    from tasks import add_ticker_prices
+    from tasks import add_chunked_prices
     tickers = kwargs.get("tickers")
     tickers = [(tk.id,tk.symbol) for tk in tickers]
-    add_ticker_prices(full=True,tickers=tickers)
+    add_chunked_prices.delay(on_commit=True,tickers=tickers)

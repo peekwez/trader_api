@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 -*-
 
 from flask import Flask
-from models import db, Price, Ticker
+from models import db, Price, Ticker, UpdatesLog
 from constants import OPERATORS, PRICE_COLUMNS, TICKER_COLUMNS, UPDATE_TIME
 
 from pandas_datareader import data as pdr
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, time
 import fix_yahoo_finance as yf
 
 
-date = lambda x: datetime.strptime(x,'%Y-%m-%d')
+date_fmt = lambda x: datetime.strptime(x,'%Y-%m-%d')
 
 
 def add_price_params(parser):
@@ -22,7 +22,7 @@ def add_price_params(parser):
 
     # add date parser
     for ops in operators:
-        parser.add_argument("date{0}".format(ops), type=date)
+        parser.add_argument("date{0}".format(ops), type=date_fmt)
 
     # add OHCL parser
     fields = ("open","low","high","close","adj_close","volume")
@@ -44,7 +44,7 @@ def comp(a,b,ops=None):
         return a <= b
     elif ops == "lt":
         return a < b
-    else:
+    elif ops == "eq":
         return a == b
 
 
@@ -93,14 +93,13 @@ def get_price_filters(args):
     return bools
 
 
-def get_context(config_file="config"):
-
-    # get a context for execution
-    app = Flask(__name__)
-    app.config.from_object(config_file)
-    from models import db
-    db.init_app(app)
-    return app
+def get_context(func):
+    def wrapper(*args,**kwargs):
+        # get a context for execution
+        from run import app
+        with app.app_context():
+            return func(*args,**kwargs)
+    return wrapper
 
 
 def get_chunks(l,n):
@@ -116,35 +115,59 @@ def get_ticker_id(row,tkids):
     key = row['symbol']
     return tkids[key]
 
-
+@get_context
 def get_tickers():
 
-    # get tickers
-    try:
-        tickers = Ticker.query.with_entities(
-            Ticker.id,Ticker.symbol
-        ).all()
-    except:
-        app = get_context()
-        with app.app_context():
-            tickers = Ticker.query.with_entities(
-                Ticker.id,
-                Ticker.symbol
-            ).all()
+    tickers = Ticker.query.all()
+    tickers = [(tk.id,tk.symbol) for tk in tickers]
     return tickers
 
+@get_context
+def update_logs(end_date,task_id):
 
-def get_dates(full_update=False,offset=1):
+    log = UpdatesLog.query.filter_by(date=end_date).all()
+    if not log:
+        log = UpdatesLog(date=end_date,task_id=task_id)
+        db.session.add(log)
+        db.session.commit()
+
+@get_context
+def get_dates(on_commit=False):
 
 
-    # daily updates
-    date_0 = datetime.now() - timedelta(offset)
-    date_1 = date_0 + timedelta(1)
-    if full_update:
-        year = date_1.year;
-        date_0 = datetime(year-15,1,1)
-        if date_1.time() < UPDATE_TIME:
-            date_1 -= timedelta(1)
+    # date 1 date log
+    date_1 = datetime.now() - timedelta(1)
+    if date_1.time() < UPDATE_TIME:
+        date_1 = date_1 - timedelta(1)
+    date_1 = date_1.replace(hour=0,minute=0,second=0,microsecond=0)
+
+
+    # check last update
+    if on_commit:
+
+        # check for start date for commit updates
+        log = UpdatesLog.query.order_by("date asc").limit(1).all()
+
+        if log:
+            date_0 = log[0].date
+
+            # check for the latest update
+            log = UpdatesLog.query.order_by("date desc").limit(1).all()
+            if log[0].date > date_0:
+                date_1 = log[0].date
+
+        else:
+            year = datetime.now().year-15;
+            date = datetime(year,1,1)
+
+            log = UpdatesLog(date=date,task_id="<initial_update_0000>")
+            db.session.add(log)
+            db.session.commit()
+
+            date_0 = log.date # start date
+    else:
+        log = UpdatesLog.query.order_by("date desc").limit(1).all()
+        date_0 = log[0].date + timedelta(1)
 
     return date_0,date_1
 
@@ -203,16 +226,11 @@ def modify_prices(df,tkids):
     df.columns = df.columns.str.replace(" ","_")
     return df
 
-
+@get_context
 def upload_prices(df):
 
     # get database engine
-    try:
-        db_eng = db.get_engine()
-    except:
-        app = get_context()
-        with app.app_context():
-            db_eng = db.get_engine()
+    db_eng = db.get_engine()
 
     # upload data
     df.to_sql(
@@ -220,21 +238,18 @@ def upload_prices(df):
         index=False,chunksize=10000
     )
 
-def update_prices(full,tickers):
+def update_prices(tickers, start_date, end_date):
 
-    # get dates
-    start_date, end_date = get_dates(full)
-
-    # fetch data
+    # fetch date
     symbols = [sym for _,sym in tickers]
     df,err,msg = fetch_prices(symbols,start_date,end_date)
     if err < 0 or err > 0:
         result = {"errors":err, "message": msg}
         return result
 
-
     tkids = {sym:tkid for tkid,sym in tickers}
     df = modify_prices(df,tkids)
+
     try:
         upload_prices(df)
         result = {"errors": 0, "message":[]}

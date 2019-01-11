@@ -60,11 +60,11 @@ class TickerResource(Resource):
         db.session.add_all(tickers)
         db.session.commit()
 
+        # jsonify results
+        result = tickers_schema.dump(tickers).data
+
         # emit signal
         after_post_tickers.send(self,tickers=tickers)
-
-        # return results
-        result = tickers_schema.dump(tickers).data
 
         return {'status':'success', 'data':result},201
 
