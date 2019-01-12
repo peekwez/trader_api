@@ -115,21 +115,19 @@ def get_ticker_id(row,tkids):
     key = row['symbol']
     return tkids[key]
 
+
 @get_context
 def get_tickers():
 
-    tickers = Ticker.query.all()
+    tickers = Ticker.get_all_tickers()
     tickers = [(tk.id,tk.symbol) for tk in tickers]
     return tickers
 
+
 @get_context
 def update_logs(end_date,task_id):
+    UpdatesLog.update_log(end_date,task_id)
 
-    log = UpdatesLog.query.filter_by(date=end_date).all()
-    if not log:
-        log = UpdatesLog(date=end_date,task_id=task_id)
-        db.session.add(log)
-        db.session.commit()
 
 @get_context
 def get_dates(on_commit=False):
@@ -146,15 +144,15 @@ def get_dates(on_commit=False):
     if on_commit:
 
         # check for start date for commit updates
-        log = UpdatesLog.query.order_by("date asc").limit(1).all()
+        log = UpdatesLog.query.order_by("date asc").limit(1).first()
 
         if log:
-            date_0 = log[0].date
+            date_0 = log.date
 
             # check for the latest update
-            log = UpdatesLog.query.order_by("date desc").limit(1).all()
-            if log[0].date > date_0:
-                date_1 = log[0].date
+            log = UpdatesLog.query.order_by("date desc").limit(1).first()
+            if log.date > date_0:
+                date_1 = log.date
 
         else:
             year = datetime.now().year-15;
@@ -166,8 +164,8 @@ def get_dates(on_commit=False):
 
             date_0 = log.date # start date
     else:
-        log = UpdatesLog.query.order_by("date desc").limit(1).all()
-        date_0 = log[0].date + timedelta(1)
+        log = UpdatesLog.query.order_by("date desc").limit(1).first()
+        date_0 = log.date + timedelta(1)
 
     return date_0,date_1
 

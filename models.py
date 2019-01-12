@@ -5,7 +5,8 @@ from marshmallow import fields, post_dump, validate
 from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
 from flask_babel import lazy_gettext as _
-from sqlalchemy_utils import ChoiceType
+from sqlalchemy_utils import ChoiceType, EmailType
+from passlib.hash import pbkdf2_sha256 as sha256
 
 from itertools import groupby
 from datetime import datetime
@@ -53,10 +54,51 @@ class Ticker(db.Model):
         onupdate=datetime.utcnow,
     )
 
+
+    def update_ticker(self,data):
+        for key, value in data.items():
+            setattr(self,key,value)
+        db.session.commit()
+
+    @classmethod
+    def filter_tickers(cls,filters):
+        return cls.query.order_by(cls.id.asc()).filter(*filters).all()
+
+    @classmethod
+    def get_all_tickers(cls):
+        return cls.query.order_by(cls.id.asc()).all()
+
+    @classmethod
+    def filter_by_kwargs(cls,**kwargs):
+        return cls.query.filter_by(**kwargs).all()
+
+    @classmethod # only admin
+    def delete_tickers(cls,symbols):
+        cls.query.filter(cls.symbol.in_(symbols)).delete(
+            synchronize_session=False
+        )
+        db.session.commit()
+
+    @classmethod # only admin
+    def add_tickers(cls,data):
+        tickers = [cls(**item) for item in data]
+        db.session.add_all(tickers)
+        db.session.commit()
+        return tickers
+
+
     def __repr__(self):
         return '<Ticker: {0} - {1}>'.format(self.name,self.symbol)
 
 
+# a model to attach prices to a single ticker
+class TickerPrices(object):
+    def __init__(self,ticker,prices):
+        self.ticker = ticker
+        self.prices = prices
+
+
+# price model
 class Price(db.Model):
 
     __tablename__ = "prices"
@@ -79,30 +121,19 @@ class Price(db.Model):
     adj_close = db.Column(db.Float, nullable=False)
     volume = db.Column(db.Float, nullable=False)
 
-    def __repr__(self):
-        return '<Price: {0} - OHLC>'.format(self.ticker.symbol)
+
+    @classmethod
+    def filter_prices(cls,filters):
+        prices = cls.query.order_by(
+            cls.ticker_id.asc(),
+            cls.date.asc(),
+        ).filter(*filters).all()
+        return prices
 
 
-class UpdatesLog(db.Model):
-    __tablename__ = "updates_log"
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    date = db.Column(db.DateTime,nullable=False)
-    task_id = db.Column(db.String(250), nullable=True)
-
-
-
-# schema serializers
-class TickerPrices(object):
-    def __init__(self,ticker,prices):
-        self.ticker = ticker
-        self.prices = prices
-
-
-class TickerPricesFactory:
-
-    @staticmethod
-    def create_objects(prices):
+    @classmethod
+    def filter_ticker_prices(cls,filters):
+        prices = cls.filter_prices(filters)
         keyfun = lambda p: p.ticker_id
         objs = []
         for k,g in groupby(prices,key=keyfun):
@@ -111,7 +142,76 @@ class TickerPricesFactory:
             objs.append(TickerPrices(ticker,tkprices))
         return objs
 
+    def __repr__(self):
+        return '<Price: {0} - OHLC>'.format(self.ticker.symbol)
 
+
+class UpdatesLog(db.Model):
+    __tablename__ = "updates_log"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    date = db.Column(db.DateTime,unique=True,nullable=False)
+    task_id = db.Column(db.String(250), nullable=True)
+
+    @classmethod
+    def update_log(cls,date,task_id):
+        log = cls.query.filter_by(date=date).first()
+        if not log:
+            log = cls(date=date,task_id=task_id)
+            db.session.add(log)
+            db.session.commit()
+
+
+class User(db.Model):
+    __tablename = "users"
+
+    id = db.Column(db.Integer,primary_key=True)
+    first_name = db.Column(db.String(120), nullable=False)
+    last_name  = db.Column(db.String(120), nullable=False)
+    email      = db.Column(EmailType(250), unique=True, nullable=False)
+    password   = db.Column(db.String(120), nullable=False)
+    is_admin   = db.Column(db.Boolean, nullable=False, default=False)
+
+    def save_to_db(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def generate_hash(password):
+        return sha256.hash(password)
+
+    @staticmethod
+    def verify_hash(password,hash):
+        return sha256.verify(password,hash)
+
+    @classmethod
+    def create_user(cls,data):
+        user = cls(first_name=data["first_name"],
+                   last_name=data["last_name"],
+                   email=data["email"],
+                   password=cls.generate_hash(data["password"])
+               )
+        return user
+
+    @classmethod
+    def find_by_email(cls, email):
+        return cls.query.filter_by(email=email).first()
+
+
+    @classmethod # only admin
+    def get_all_users(cls):
+        return cls.query.order_by(
+            cls.last_name.asc(),
+            cls.first_name.asc()
+        ).all()
+
+    @classmethod # only admin
+    def delete_users(cls,id):
+        cls.query.filter(cls.id == id).delete()
+        db.session.commit()
+
+
+# schema serializers
 class TickerSchema(ma.Schema):
 
     id = fields.Integer(dump_only=True)
@@ -148,4 +248,14 @@ class TickerPricesSchema(ma.Schema):
     prices = fields.Nested(PriceSchema,many=True)
 
     class Meta:
+        ordered = True
+
+
+class UserSchema(ma.Schema):
+
+    class Meta:
+        fields = (
+            "first_name", "last_name",
+            "email","is_admin", "id",
+        )
         ordered = True

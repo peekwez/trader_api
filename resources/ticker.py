@@ -4,7 +4,6 @@ from flask import request
 from flask_restful import Resource, reqparse
 from models import db, Ticker, TickerSchema
 from utils import get_ticker_filters
-from sqlalchemy import tuple_
 
 from signals import after_post_tickers
 
@@ -25,9 +24,9 @@ class TickerResource(Resource):
         args = parser.parse_args(request,strict=True)
         if len(args) > 0:
             filters = get_ticker_filters(args)
-            tickers = Ticker.query.order_by(Ticker.id.asc()).filter(*filters)
+            tickers = Ticker.filter_tickers(filters)
         else:
-            tickers = Ticker.query.order_by(Ticker.id.asc()).all()
+            tickers = Ticker.get_all_tickers()
         tickers = tickers_schema.dump(tickers).data
         return {'status':'success','data':tickers},200
 
@@ -43,8 +42,9 @@ class TickerResource(Resource):
             return errors,422
 
         # check if any of tickers already exists
-        items = [(item["symbol"],) for item in data]
-        tickers = Ticker.query.filter(Ticker.symbol.in_(items)).all()
+        items = [item["symbol"] for item in data]
+        filters = (Ticker.symbol.in_(items),)
+        tickers = Ticker.filter_tickers(filters)
 
 
         # if any of the tickers exist don't pass; all or nothing
@@ -54,19 +54,12 @@ class TickerResource(Resource):
             return {'message': 'Ticker symbols %s already exists'%names},400
 
         # instantiate ticker and save
-        tickers = [Ticker(**item) for item in data]
-
-        # add tickers and commit
-        db.session.add_all(tickers)
-        db.session.commit()
-
-        # jsonify results
-        result = tickers_schema.dump(tickers).data
+        tickers = Ticker.add_tickers(data)
 
         # emit signal
         after_post_tickers.send(self,tickers=tickers)
 
-        return {'status':'success', 'data':result},201
+        return {"message": "Tickers added to database"},201
 
 
     def put(self):
@@ -83,19 +76,16 @@ class TickerResource(Resource):
         if errors:
             return errors, 422
         symbol = args.get("symbol")
-        ticker = Ticker.query.filter_by(symbol=symbol)
+        ticker = Ticker.filter_by_kwargs(symbol=symbol)[0]
 
 
         # check if ticker exists
         if not ticker:
             return {'message': 'Ticker does not exist'},400
 
-        ticker.update(data)
-        db.session.commit()
+        ticker.update_ticker(data)
 
-        result = ticker_schema.dump(ticker).data
-
-        return {"status": 'success', 'data': result},204
+        return {"message": "Ticker {0} updated"},204
 
 
     def delete(self):
@@ -104,9 +94,7 @@ class TickerResource(Resource):
             return {'message': 'Symbol to delete is required'},400
 
         symbols = args.get("symbol").split(",")
-        tickers = Ticker.query.filter(
-            Ticker.symbol.in_(symbols)
-        ).delete(synchronize_session=False)
-        db.session.commit()
+        Ticker.delete_tickers(symbols)
 
-        return {"status": 'success'}, 204
+        names = args.get("symbol")
+        return {"message": 'Ticker <{0}> deleted'.format(names)}, 204
