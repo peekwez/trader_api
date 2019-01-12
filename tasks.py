@@ -5,18 +5,26 @@ from celery.utils.log import get_task_logger
 
 from run import celery as app
 from utils import (get_chunks, get_dates, update_logs,
-                   get_tickers, update_prices)
+                   get_tickers, update_prices, prune_expired_tokens)
 
 logger = get_task_logger(__name__)
 
-class EmptyDataFrameException(Exception):
-    def __init__(self,message,errors):
-        super(EmptyDataFrameException,self).__init__(message,errors)
+class ReturnedEmptyData(Exception):
+    pass
 
+class PricesUpdateFailed(Exception):
+    pass
 
-class UpdateDabaseException(Exception):
-    def __init__(self,message,errors):
-        super(UpdateDabaseException,self).__init__(message,errors)
+class PruneTokensFailed(Exception):
+    pass
+
+@app.task
+def prune_tokens():
+    try:
+        prune_expired_tokens()
+    except:
+        raise PruneTokensFailed("Prune tokens database failed")
+    return {"message": "Expired tokens deleted"}
 
 
 @app.task(bind=True)
@@ -27,16 +35,10 @@ def add_prices(self,tickers,start_date,end_date):
         result = update_prices(tickers, start_date, end_date)
 
         if result["errors"] < 0:
-            raise  EmptyDataFrameException(
-                "Empty data returned",
-                result["message"]
-            )
+            raise  ReturnedEmptyData(result["message"])
 
         elif result["errors"] > 0:
-            raise  UpdateDabaseException(
-                "Database update failed",
-                result["message"]
-            )
+            raise  PricesUpdateFailed(result["message"])
 
     except (EmptyDataFrameException) as error:
         raise self.retry(exc=error, max_retries=5)

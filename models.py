@@ -1,18 +1,14 @@
 # _*_ coding: utf-8 -*-
 
 from flask import Flask
-from marshmallow import fields, post_dump, validate
-from flask_marshmallow import Marshmallow
-from flask_sqlalchemy import SQLAlchemy
 from flask_babel import lazy_gettext as _
 from sqlalchemy_utils import ChoiceType, EmailType
 from passlib.hash import pbkdf2_sha256 as sha256
+from flask_jwt_extended import decode_token
 
+from extensions import db
 from itertools import groupby
 from datetime import datetime
-
-ma = Marshmallow()
-db = SQLAlchemy()
 
 # schema models
 class Ticker(db.Model):
@@ -26,7 +22,6 @@ class Ticker(db.Model):
         (u"security",_(u"Security")),
         (u"index",_(u"Index")),
     )
-
 
     __tablename__ = "tickers"
 
@@ -46,12 +41,12 @@ class Ticker(db.Model):
     )
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=datetime.now,
         nullable=False
     )
     updated_at = db.Column(
         db.DateTime,
-        onupdate=datetime.utcnow,
+        onupdate=datetime.now,
     )
 
 
@@ -146,6 +141,7 @@ class Price(db.Model):
         return '<Price: {0} - OHLC>'.format(self.ticker.symbol)
 
 
+# price update logs model
 class UpdatesLog(db.Model):
     __tablename__ = "updates_log"
 
@@ -162,8 +158,9 @@ class UpdatesLog(db.Model):
             db.session.commit()
 
 
+# user model
 class User(db.Model):
-    __tablename = "users"
+    __tablename__ = "users"
 
     id = db.Column(db.Integer,primary_key=True)
     first_name = db.Column(db.String(120), nullable=False)
@@ -171,9 +168,15 @@ class User(db.Model):
     email      = db.Column(EmailType(250), unique=True, nullable=False)
     password   = db.Column(db.String(120), nullable=False)
     is_admin   = db.Column(db.Boolean, nullable=False, default=False)
+    last_login = db.Column(db.DateTime,default=datetime.now,nullable=False)
+    date_joined = db.Column(db.DateTime,default=datetime.now,nullable=False)
 
     def save_to_db(self):
         db.session.add(self)
+        db.session.commit()
+
+    def update_last_login(self):
+        self.last_login = datetime.now()
         db.session.commit()
 
     @staticmethod
@@ -198,64 +201,69 @@ class User(db.Model):
         return cls.query.filter_by(email=email).first()
 
 
-    @classmethod # only admin
+    @classmethod
     def get_all_users(cls):
         return cls.query.order_by(
             cls.last_name.asc(),
             cls.first_name.asc()
         ).all()
 
-    @classmethod # only admin
-    def delete_users(cls,id):
-        cls.query.filter(cls.id == id).delete()
+    @classmethod
+    def delete_users(cls,ids):
+        users = cls.query.filter(cls.id.in_(ids))
+        for user in users:
+            db.session.delete(user)
         db.session.commit()
 
 
-# schema serializers
-class TickerSchema(ma.Schema):
 
-    id = fields.Integer(dump_only=True)
-    name = fields.String(required=True, validate=validate.Length(1))
-    symbol = fields.String(required=True, validate=validate.Length(1))
-    sector = fields.String(validate=validate.Length(1), allow_none=True)
-    industry = fields.String(validate=validate.Length(1), allow_none=True)
-    exchange = fields.String(validate=validate.Length(1), allow_none=True)
-    market = fields.String(required=True, validate=validate.Length(1))
-    type = fields.String(required=True, validate=validate.Length(1))
+class NoResultFound(Exception):
+    pass
 
-    class Meta:
-        fields = (
-            "name", "exchange","symbol", "type",
-            "market","sector","industry",
+def _epoch_utc_to_datetime(epoch_utc):
+    return datetime.fromtimestamp(epoch_utc)
+
+class TokenBlackList(db.Model):
+
+    __tablename__ = "token_black_list"
+
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), nullable=False)
+    token_type = db.Column(db.String(10), nullable=False)
+    revoked = db.Column(db.Boolean, nullable=False)
+    expires = db.Column(db.DateTime, nullable=False)
+
+    @classmethod
+    def add_token(cls, encoded_token):
+        decoded_token = decode_token(encoded_token)
+        params = dict(
+            jti = decoded_token["jti"],
+            token_type = decoded_token["type"],
+            expires = _epoch_utc_to_datetime(
+                decoded_token["exp"]
+            ),
+            revoked = False
         )
-        ordered = True
+
+        token = cls(**params)
+        db.session.add(token)
+        db.session.commit()
+
+    @classmethod
+    def is_revoked(cls, decoded_token):
+        jti = decoded_token["jti"]
+        try:
+            token = cls.query.filter_by(jti=jti).one()
+            return token.revoked
+        except NoResultFound:
+            return True
 
 
-class PriceSchema(ma.Schema):
-
-    class Meta:
-        fields  = (
-            "date","open","high",
-            "low","close","adj_close",
-            "volume"
-        )
-        ordered =  True
-
-
-class TickerPricesSchema(ma.Schema):
-
-    ticker = fields.Nested(TickerSchema)
-    prices = fields.Nested(PriceSchema,many=True)
-
-    class Meta:
-        ordered = True
-
-
-class UserSchema(ma.Schema):
-
-    class Meta:
-        fields = (
-            "first_name", "last_name",
-            "email","is_admin", "id",
-        )
-        ordered = True
+    @classmethod
+    def revoke_token(cls, jti):
+        try:
+            token = cls.query.filter_by(jti=jti).one()
+            token.revoked = True
+            db.session.commit()
+        except NoResultFound:
+            raise TokenNotFound("Could not find the token {0}".format(token_id))

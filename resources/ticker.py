@@ -2,24 +2,28 @@
 
 from flask import request
 from flask_restful import Resource, reqparse
-from models import db, Ticker, TickerSchema
-from utils import get_ticker_filters
+from flask_jwt_extended import jwt_required
 
+from models import Ticker
+from serializers import TickerSchema
+from utils import get_ticker_filters
 from signals import after_post_tickers
+from resources.user import admin_rights_required
 
 tickers_schema = TickerSchema(many=True)
 ticker_schema = TickerSchema()
 
 parser = reqparse.RequestParser()
-parser = parser.add_argument("symbol",type=str)
-parser = parser.add_argument("sector",type=str)
-parser = parser.add_argument("industry",type=str)
-parser = parser.add_argument("exchange",type=str)
-parser = parser.add_argument("market",type=str)
-parser = parser.add_argument("type",type=str)
+parser.add_argument("symbol",type=str)
+parser.add_argument("sector",type=str)
+parser.add_argument("industry",type=str)
+parser.add_argument("exchange",type=str)
+parser.add_argument("market",type=str)
+parser.add_argument("type",type=str)
 
 class TickerResource(Resource):
 
+    @jwt_required
     def get(self):
         args = parser.parse_args(request,strict=True)
         if len(args) > 0:
@@ -30,7 +34,8 @@ class TickerResource(Resource):
         tickers = tickers_schema.dump(tickers).data
         return {'status':'success','data':tickers},200
 
-
+    @admin_rights_required
+    @jwt_required
     def post(self):
         json_data = request.get_json(force=True)
         if not json_data:
@@ -61,7 +66,8 @@ class TickerResource(Resource):
 
         return {"message": "Tickers added to database"},201
 
-
+    @admin_rights_required
+    @jwt_required
     def put(self):
         args = parser.parse_args(request,strict=True)
         if not args.has_key("symbol"):
@@ -88,6 +94,8 @@ class TickerResource(Resource):
         return {"message": "Ticker {0} updated"},204
 
 
+    @admin_rights_required
+    @jwt_required
     def delete(self):
         args = parser.parse_args(request,strict=True)
         if not args.has_key("symbol"):

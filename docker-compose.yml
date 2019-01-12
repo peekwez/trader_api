@@ -31,7 +31,6 @@ services:
   # rabbitmq server
   rabbit:
     image: rabbitmq:3.6.0
-    env_file: etc/.rabbit.env
     ports:
       - "5671:5672"
       - "15671:15672" # rabbitmq management plugin
@@ -45,8 +44,8 @@ services:
       context: ./services/app
       dockerfile: Dockerfile
     command: ./run_dev.sh
-    env_file:
-      - etc/.dev.env
+    environment:
+      - FLASK_ENV=development
     volumes:
       - .:/app
     ports:
@@ -59,15 +58,15 @@ services:
     networks:
       - trader
 
-  # chausette/circus service for flask app, celery, beat, flower and
+  # chausette/circus service for flask app, celery, beat, flower
   app:
     restart: always
     build:
       context: ./services/app
       dockerfile: Dockerfile
     command: ./run_app.sh
-    env_file:
-      - etc/.app.env
+    environment:
+      - FLASK_ENV=production
     volumes:
       - .:/app
     ports:

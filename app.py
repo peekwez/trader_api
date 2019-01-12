@@ -10,7 +10,7 @@ from resources import user
 trader = Blueprint('trader',__name__)
 api = Api(trader)
 
-api.add_resource(Home,'/')
+api.add_resource(Home,'/info')
 
 # user and authentication resources
 api.add_resource(user.UserRegister,"/register")

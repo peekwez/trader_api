@@ -1,16 +1,23 @@
 # _*_ coding: utf-8 -*-
 
 from flask import Flask
-from models import db, Price, Ticker, UpdatesLog
-from constants import OPERATORS, PRICE_COLUMNS, TICKER_COLUMNS, UPDATE_TIME
+from extensions import db
+
+from models import Price, Ticker, UpdatesLog, TokenBlackList
+from constants import (OPERATORS, PRICE_COLUMNS,
+                       TICKER_COLUMNS, UPDATE_TIME)
 
 from pandas_datareader import data as pdr
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 import fix_yahoo_finance as yf
 
+import os
+
+
+class ImproperlyConfigured(Exception):
+    pass
 
 date_fmt = lambda x: datetime.strptime(x,'%Y-%m-%d')
-
 
 def add_price_params(parser):
 
@@ -255,3 +262,58 @@ def update_prices(tickers, start_date, end_date):
         result = {"errors": 1, "message":exception}
 
     return result
+
+def get_env(var_name):
+    try:
+        return os.environ[var_name]
+    except KeyError:
+        error_message = "Set the {0} environment variable".format(var_name)
+        raise ImproperlyConfigured(error_message)
+
+
+def get_url(service):
+    if service is "rabbit":
+        params = dict(
+            host=get_env("RABBIT_HOST"),
+            port=get_env("RABBIT_PORT")
+        )
+        url="amqp://{host}:{port}".format(**params)
+
+    elif service is "postgres":
+        params = dict(
+            user=get_env("POSTGRES_USER"),
+            password=get_env("POSTGRES_PASS"),
+            db=get_env("POSTGRES_DB"),
+            host=get_env("POSTGRES_HOST"),
+            port=get_env("POSTGRES_PORT")
+        )
+        url="postgresql://{user}:{password}@{host}:{port}/{db}".format(**params)
+
+    elif service is "redis":
+        params = dict(
+            host=get_env("REDIS_HOST"),
+            port=get_env("REDIS_PORT"),
+            db=get_env("REDIS_DB"),
+        )
+        url="redis://{host}:{port}/{db}".format(**params)
+
+    elif service is "memcached":
+        params = dict(
+            host=get_env("MEMCACHED_HOST"),
+            port=get_env("MEMCACHED_PORT")
+        )
+        url="postgresql://{host}:{port}".format(**params)
+
+    return url
+
+@get_context
+def prune_expired_tokens():
+
+    now = datetime.now()
+    expired = TokenBlackList.query.filter(
+        TokenBlackList.expires < now
+    ).all()
+    if expired:
+        for token in expired:
+            db.session.delete(token)
+        db.session.commit()

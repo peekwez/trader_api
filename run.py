@@ -7,6 +7,9 @@ from flask import Flask
 from flask_babel import Babel
 from celery import Celery
 
+from extensions import db, jwt
+from models import TokenBlackList
+
 def make_celery(app):
     celery = Celery(
         app.import_name,
@@ -27,6 +30,7 @@ def make_celery(app):
 
 def create_app(config_file):
 
+    # initialize flask app
     app = Flask(__name__)
     app.config.from_object(config_file)
 
@@ -41,16 +45,24 @@ def create_app(config_file):
     )
 
     # initialize db
-    from models import db
     db.init_app(app)
 
-    app.config['JSON_SORT_KEYS'] = False
+    # initialize jwt
+    jwt.init_app(app)
 
     return app
 
-# initialize app and celery
+# initialize app
 app = create_app("config")
+
+# initialize celery
 celery = make_celery(app)
 
+# revoked callback func
+@jwt.token_in_blacklist_loader
+def check_if_token_revoked(decoded_token):
+    return TokenBlackList.is_revoked(decoded_token)
+
+# start app
 if __name__ == "__main__":
     app.run(debug=True)
