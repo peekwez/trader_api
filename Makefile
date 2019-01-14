@@ -39,15 +39,12 @@ setup: web-services database process-logs
 
 # create log files
 process-logs:
-	$(call _info, Creating logs files)
+	$(call _info, Creating log files)
 	rm -fr logs; \
 	mkdir -p logs; cd logs; \
-	mkdir -p celery; cd celery; \
-	touch flower.log beat.log worker.log; \
-	cd ../; mkdir -p app; cd app; touch app.log; \
-	cd ../; mkdir -p circus; cd circus; touch manager.log; \
-	cd ../; mkdir -p nb; cd nb; touch book.log;\
-	cd ../; mkdir -p nginx; cd nginx; touch access.log error.log
+	touch flower.log beat.log worker.log \
+	app.log dev.log circus.log book.log \
+	pgadmin.log access.log error.log
 
 
 # docker compose services
@@ -66,9 +63,9 @@ dev-services: dep-services
 	docker-compose -p trader up dev
 
 # process manager
-circus:
+circus: process-logs
 	$(call _info, Starting circus watchers)
-	circusd circus.ini --daemon --log-level info --log-output logs/circus/manager.log
+	circusd circus.ini --daemon --log-level info --log-output logs/circus.log
 
 restart:
 	$(call _info, Restarting circus watcher)
@@ -89,7 +86,7 @@ chaussette:
 
 flower:
 	$(call _info, Starting celery flower on port 5012)
-	celery flower -A tasks.app -l info --port=5012
+	celery flower -A tasks.app -l info --port=5012 --pool gevent
 
 
 notebook:
@@ -129,9 +126,9 @@ init:
 	$(call _info, Initialize database migrations)
 	python -W ignore manage.py db init
 
-#createsu:
-#	$(call _info, Creating superuser for Django app)
-#	cd src && python manage.py createsuperuser
+createsu:
+	$(call _info, Creating admin user for Trader app)
+	python -W ignore manage.py create_admin_user
 
 #graphmodels:
 #	$(call _info, Graphing Django app models)
@@ -167,5 +164,5 @@ removecache:
 	rm -fr .cache
 
 killports:
-	sudo fuser -k 5000/tcp 5011/tcp 5012/tcp 5080/tcp
-#	sudo fuser -k 11210/tcp 6378/tcp 15761/tcp 5431/tcp
+	sudo fuser -k 5000/tcp 5001/tcp 5002/tcp \
+	5003/tcp 5004/tcp 5555/tcp

@@ -31,23 +31,10 @@ class Ticker(db.Model):
     sector = db.Column(db.String(250), nullable=True)
     industry = db.Column(db.String(250), nullable=True)
     exchange = db.Column(db.String(50),nullable=True)
-    market = db.Column(
-        ChoiceType(MARKETS),
-        nullable=False
-    )
-    type = db.Column(
-        ChoiceType(TYPES),
-        nullable=False
-    )
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.now,
-        nullable=False
-    )
-    updated_at = db.Column(
-        db.DateTime,
-        onupdate=datetime.now,
-    )
+    market = db.Column(ChoiceType(MARKETS),nullable=False)
+    type = db.Column(ChoiceType(TYPES),nullable=False)
+    created_at = db.Column(db.DateTime,default=datetime.now,nullable=False)
+    updated_at = db.Column(db.DateTime,onupdate=datetime.now)
 
 
     def update_ticker(self,data):
@@ -170,6 +157,15 @@ class User(db.Model):
     is_admin   = db.Column(db.Boolean, nullable=False, default=False)
     last_login = db.Column(db.DateTime,default=datetime.now,nullable=False)
     date_joined = db.Column(db.DateTime,default=datetime.now,nullable=False)
+
+
+    def __repr__(self):
+        obj_name = "Admin" if self.is_admin else "User"
+        return '<{0}: {1} {2}>'.format(
+            obj_name,
+            self.first_name,
+            self.last_name
+        )
 
     def save_to_db(self):
         db.session.add(self)

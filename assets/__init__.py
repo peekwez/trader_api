@@ -4,8 +4,13 @@ import pandas as pd
 import requests
 
 from constants import TICKER_LIST, VALUATION_LIMIT
+from models import User, TokenBlackList
+from flask_jwt_extended import create_access_token
+
+from datetime import timedelta
 
 class TickerReader(object):
+
     def __init__(self,url,vendor="yahoo"):
         self.__url = url
         self.__df = self.__get_tickers(vendor)
@@ -22,11 +27,36 @@ class TickerReader(object):
        return resp
 
     def __post(self,exchange):
+
+        # get user by email
+        username = "admin@trader.com"
+        user = User.find_by_email(email)
+
+        # create access token for this request - 5 mins duration
+        access_token = create_access_token(
+            identity=user,
+            expires_delta=timedelta(minutes=5),
+        )
+        TokenBlackList.add_token(access_token)
+
+        # get header
+        headers={
+            "Authorization": "Bearer {JWT}".format(JWT=access_token)
+        }
+
+        # prepare request
         data = self.__dt[exchange]
         resp = requests.post(
             self.__url,
-            json=data
+            headers = headers,
+            json = data
         )
+
+        # revoke access token
+        decoded_token = decode_token(access_token)
+        jti = decoded_token["jti"]
+        TokenBlackList.revoke_token(jti)
+
         return resp
 
     def __get_df(self,exchange):
@@ -71,7 +101,7 @@ class TickerReader(object):
                     )
                 tmp["market"] = "CA"
 
-            # remove duplicates alread on NYSE from NASDAQ
+            # remove duplicates already on NYSE from NASDAQ
             elif sheet == "nasdaq":
                 on_nyse = (
                     "AMOV","EGHT","GOLD","MSG","NCLH",
@@ -92,8 +122,8 @@ class TickerReader(object):
             # set data frame
             df[sheet] = tmp
 
-
         return df
+
 
     def __modify_symbols(self,row):
         sym = str(row["symbol"]).strip()
@@ -102,6 +132,7 @@ class TickerReader(object):
         elif row["exchange"] == "TSXV":
             sym = sym.replace(".","-") + ".V"
         return sym
+
 
     def __df_to_dict(self):
         dt = dict()

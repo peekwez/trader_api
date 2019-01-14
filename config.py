@@ -19,7 +19,6 @@ JSON_SORT_KEYS = False
 
 
 # jwt config
-JWT_SECRET_KEY = utils.get_env("JWT_SECRET_KEY")
 JWT_BLACKLIST_ENABLED = True
 JWT_BLACKLIST_TOKEN_CHECKS = ["access","refresh"]
 

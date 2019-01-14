@@ -125,7 +125,6 @@ def get_ticker_id(row,tkids):
 
 @get_context
 def get_tickers():
-
     tickers = Ticker.get_all_tickers()
     tickers = [(tk.id,tk.symbol) for tk in tickers]
     return tickers

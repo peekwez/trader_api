@@ -1,4 +1,4 @@
-evn/
+env/
 
 *.pyc
 __pycache__/

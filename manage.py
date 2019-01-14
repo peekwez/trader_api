@@ -7,7 +7,7 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_jwt_extended import create_access_token, create_refresh_token
 
 from run import app
-from extensions import db
+from extensions import db, jwt, ma
 from models import Ticker, Price, UpdatesLog, User, TokenBlackList
 from tasks import add_prices, add_chunked_prices
 from constants import BANNER
@@ -26,10 +26,14 @@ def _make_context():
     kwargs = dict(
         app=app,
         db=db,
+        jwt=jwt,
+        ma=ma,
         add_prices=add_prices,
         add_ticker_prices=add_chunked_prices,
         Ticker=Ticker,
         Price=Price,
+        User=User,
+        TokenBlackList=TokenBlackList,
         UpdatesLog=UpdatesLog,
         utils=utils,
     )

@@ -56,7 +56,7 @@ VALUATION_LIMIT = {
 
 BANNER  = "\n  Trader Ipython Shell\n"
 BANNER += 25*"-" + "\n"
-BANNER += " App     :: app, db \n"
-BANNER += " Models  :: Ticker, Price, UpdatesLog \n"
+BANNER += " App     :: app, db, jwt, ma \n"
+BANNER += " Models  :: Ticker, Price, UpdatesLog, User, TokenBlackList \n"
 BANNER += " Tasks   :: add_prices, add_ticker_prices \n"
 BANNER += " Modules :: utils \n"

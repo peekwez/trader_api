@@ -1,4 +1,5 @@
 #!/bin/bash
+export SECRET_KEY='^d8d@fwd9g%i4^tpk$(x+)#p6hhdzc^nb((sa^$f#4dgkkcwd)'
 export JWT_SECRET_KEY='9@k91w*oz1*ck)#*ahtultakva@yckw-@%sx-rvl^t+okg6z(o'
 
 export HOSTNAME='localhost'

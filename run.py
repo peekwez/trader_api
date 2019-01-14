@@ -9,6 +9,7 @@ from celery import Celery
 
 from extensions import db, jwt
 from models import TokenBlackList
+from utils import get_env
 
 def make_celery(app):
     celery = Celery(
@@ -28,21 +29,28 @@ def make_celery(app):
     return celery
 
 
-def create_app(config_file):
+def create_app(test_config=None):
 
     # initialize flask app
     app = Flask(__name__)
-    app.config.from_object(config_file)
+    app.config.from_mapping(
+        SECRET_KEY=get_env("SECRET_KEY"),
+        JWT_SECRET_KEY=get_env("JWT_SECRET_KEY")
+    )
+    if test_config is None:
+        app.config.from_pyfile("config.py",silent=True)
+        # register api
+        from app import trader
+        app.register_blueprint(
+            trader,
+            url_prefix= app.config["URL_PREFIX"]
+        )
+    else:
+        app.config.update(test_config)
+
 
     # babel
     babel = Babel(app)
-
-    # register api
-    from app import trader
-    app.register_blueprint(
-        trader,
-        url_prefix= app.config["URL_PREFIX"]
-    )
 
     # initialize db
     db.init_app(app)
@@ -53,7 +61,7 @@ def create_app(config_file):
     return app
 
 # initialize app
-app = create_app("config")
+app = create_app()
 
 # initialize celery
 celery = make_celery(app)
