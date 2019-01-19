@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required
 
 from models import Ticker
 from serializers import TickerSchema
-from utils import get_ticker_filters
+from utils import get_ticker_filters, add_ticker_params
 from signals import after_post_tickers
 from resources.user import admin_rights_required
 
@@ -14,12 +14,7 @@ tickers_schema = TickerSchema(many=True)
 ticker_schema = TickerSchema()
 
 parser = reqparse.RequestParser()
-parser.add_argument("symbol",type=str)
-parser.add_argument("sector",type=str)
-parser.add_argument("industry",type=str)
-parser.add_argument("exchange",type=str)
-parser.add_argument("market",type=str)
-parser.add_argument("type",type=str)
+parser = add_ticker_params(parser)
 
 class TickerResource(Resource):
 
@@ -27,12 +22,16 @@ class TickerResource(Resource):
     def get(self):
         args = parser.parse_args(request,strict=True)
         if len(args) > 0:
-            filters = get_ticker_filters(args)
-            tickers = Ticker.filter_tickers(filters)
+            base_filters,price_filters,agg_filter = get_ticker_filters(args)
+            if price_filters or agg_filter:
+                base_filters += price_filters
+                tickers = Ticker.aggregate_filter(base_filters,agg_filter)
+            else:
+                tickers = Ticker.filter_tickers(base_filters)
         else:
             tickers = Ticker.get_all_tickers()
         tickers = tickers_schema.dump(tickers).data
-        return {'status':'success','data':tickers},200
+        return {'data':tickers},200
 
     @admin_rights_required
     @jwt_required

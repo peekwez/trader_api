@@ -18,9 +18,11 @@ class PriceResource(Resource):
     @jwt_required
     def get(self):
         args = parser.parse_args(strict=True)
+        if not any(args.values()):
+            return {"message":"At least one argument required"},401
         filters = get_price_filters(args)
 
         ticker_prices = Price.filter_ticker_prices(filters)
         data = prices_schema.dump(ticker_prices).data
 
-        return {'status':'success','data':data},200
+        return {'data':data},200

@@ -3,6 +3,7 @@
 from flask import Flask
 from flask_babel import lazy_gettext as _
 from sqlalchemy_utils import ChoiceType, EmailType
+from sqlalchemy.orm import column_property
 from passlib.hash import pbkdf2_sha256 as sha256
 from flask_jwt_extended import decode_token
 
@@ -10,7 +11,56 @@ from extensions import db
 from itertools import groupby
 from datetime import datetime
 
-# schema models
+# price model
+class Price(db.Model):
+
+    __tablename__ = "prices"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ticker = db.relationship(
+        'Ticker',
+        backref=db.backref('prices',lazy='dynamic'),
+    )
+    ticker_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tickers.id',ondelete='CASCADE'),
+        nullable=False
+    )
+    date = db.Column(db.Date,nullable=False)
+    open = db.Column(db.Float, nullable=False)
+    low  =  db.Column(db.Float, nullable=False)
+    high = db.Column(db.Float, nullable=False)
+    close = db.Column(db.Float, nullable=False)
+    adj_close = db.Column(db.Float, nullable=False)
+    volume = db.Column(db.Float, nullable=False)
+    dollar_volume = column_property(volume*adj_close)
+
+
+    @classmethod
+    def filter_prices(cls,filters):
+        prices = cls.query.order_by(
+            cls.ticker_id.asc(),
+            cls.date.asc(),
+        ).filter(*filters).all()
+        return prices
+
+
+    @classmethod
+    def filter_ticker_prices(cls,filters):
+        prices = cls.filter_prices(filters)
+        keyfun = lambda p: p.ticker_id
+        objs = []
+        for k,g in groupby(prices,key=keyfun):
+            tkprices = list(g)
+            ticker  = tkprices[0].ticker
+            objs.append(TickerPrices(ticker,tkprices))
+        return objs
+
+    def __repr__(self):
+        return '<Price: {0} - OHLC>'.format(self.ticker.symbol)
+
+
+# ticker model
 class Ticker(db.Model):
 
     MARKETS = (
@@ -69,6 +119,21 @@ class Ticker(db.Model):
         return tickers
 
 
+    @classmethod
+    def aggregate_filter(cls,base_filters,agg_filter):
+        tickers = db.session.query(
+            cls
+        ).join(
+            Price
+        ).filter(
+            *base_filters
+        ).group_by(
+            cls.id
+        ).having(
+            *agg_filter
+        ).all()
+        return tickers
+
     def __repr__(self):
         return '<Ticker: {0} - {1}>'.format(self.name,self.symbol)
 
@@ -79,53 +144,6 @@ class TickerPrices(object):
         self.ticker = ticker
         self.prices = prices
 
-
-# price model
-class Price(db.Model):
-
-    __tablename__ = "prices"
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    ticker = db.relationship(
-        'Ticker',
-        backref=db.backref('prices',order_by='Ticker.symbol',lazy='dynamic'),
-    )
-    ticker_id = db.Column(
-        db.Integer,
-        db.ForeignKey('tickers.id',ondelete='CASCADE'),
-        nullable=False
-    )
-    date = db.Column(db.Date,nullable=False)
-    open = db.Column(db.Float, nullable=False)
-    low  =  db.Column(db.Float, nullable=False)
-    high = db.Column(db.Float, nullable=False)
-    close = db.Column(db.Float, nullable=False)
-    adj_close = db.Column(db.Float, nullable=False)
-    volume = db.Column(db.Float, nullable=False)
-
-
-    @classmethod
-    def filter_prices(cls,filters):
-        prices = cls.query.order_by(
-            cls.ticker_id.asc(),
-            cls.date.asc(),
-        ).filter(*filters).all()
-        return prices
-
-
-    @classmethod
-    def filter_ticker_prices(cls,filters):
-        prices = cls.filter_prices(filters)
-        keyfun = lambda p: p.ticker_id
-        objs = []
-        for k,g in groupby(prices,key=keyfun):
-            tkprices = list(g)
-            ticker  = tkprices[0].ticker
-            objs.append(TickerPrices(ticker,tkprices))
-        return objs
-
-    def __repr__(self):
-        return '<Price: {0} - OHLC>'.format(self.ticker.symbol)
 
 
 # price update logs model
@@ -213,6 +231,7 @@ class User(db.Model):
 
 
 
+# login tokens
 class NoResultFound(Exception):
     pass
 

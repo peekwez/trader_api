@@ -1,17 +1,21 @@
 # _*_ coding: utf-8 -*-
 
+import os
+import sys
+import tempfile
+
 from flask import Flask
+from sqlalchemy import func, and_
 from extensions import db
 
 from models import Price, Ticker, UpdatesLog, TokenBlackList
 from constants import (OPERATORS, PRICE_COLUMNS,
-                       TICKER_COLUMNS, UPDATE_TIME)
+                       TICKER_COLUMNS, UPDATE_TIME,
+                       TMP_FD, TMP_PATH, AGGREGATORS)
 
 from pandas_datareader import data as pdr
 from datetime import datetime, timedelta
 import fix_yahoo_finance as yf
-
-import os
 
 
 class ImproperlyConfigured(Exception):
@@ -25,14 +29,14 @@ def add_price_params(parser):
     operators = OPERATORS
 
     # add ticker symbol
-    parser.add_argument("symbol", type=str, action="split", required=True)
+    parser.add_argument("symbol", type=str)
 
     # add date parser
     for ops in operators:
         parser.add_argument("date{0}".format(ops), type=date_fmt)
 
     # add OHCL parser
-    fields = ("open","low","high","close","adj_close","volume")
+    fields = ("open","low","high","close","adj_close","volume","dollar_volume")
     for field in fields:
         for ops in operators:
             parser.add_argument("{0}{1}".format(field,ops), type=float)
@@ -40,7 +44,28 @@ def add_price_params(parser):
     return parser
 
 
-def comp(a,b,ops=None):
+def add_ticker_params(parser):
+
+    # base params
+    fields = ("symbol","sector","industry","exchange","market","type")
+    for field in fields:
+        parser.add_argument("{0}".format(field),type=str)
+
+    # add price params
+    parser = add_price_params(parser)
+
+    # aggregate price params
+    aggregators = AGGREGATORS
+    operators = OPERATORS
+    fields = ("open","low","high","close","adj_close","volume","dollar_volume")
+    for agg in aggregators:
+        for field in fields:
+            for ops in operators:
+                parser.add_argument("{0}{1}{2}".format(agg,field,ops),type=float)
+
+    return parser
+
+def comp(a,b,ops):
 
     # compare filters
     if ops == "gte":
@@ -55,32 +80,61 @@ def comp(a,b,ops=None):
         return a == b
 
 
+def agg_comp(agg):
+
+    if agg == "avg":
+        return func.avg
+    elif agg == "min":
+        return func.min
+    elif agg == "max":
+        return func.max
+
+
 def get_ticker_filters(args):
 
     # get filter for tickers
     columns = TICKER_COLUMNS
-    bools = ()
+    columns.update(PRICE_COLUMNS)
+    base_bool = ()
+    price_bool = ()
+    price_agg = ()
     for key in args.keys():
         if args.get(key) is not None:
-            value = args.get(key).split(",")
-            bools += columns[key](value),
+            if '__' in key:
+                value = args.get(key)
+                try:
+                    agg, param, ops = key.split("__")
+                    aggfun = agg_comp(agg)
+                    column = aggfun(columns[param])
+                    price_agg += comp(column,value,ops),
+                except ValueError:
+                    param, ops = key.split("__")
+                    column = columns[param]
+                    price_bool += comp(column,value,ops),
+            else:
+                value = args.get(key).split(",")
+                base_bool += columns[key](value),
 
-    return bools
+    if price_agg and len(price_agg) > 1:
+        price_agg = (and_(*price_agg))
+
+    return base_bool, price_bool, price_agg
 
 
 def get_price_filters(args):
 
+    bools = ()
     # get symbol ids
-    symbol = args.get('symbol').split(',')
-    ticker_id = Ticker.query.with_entities(
-        Ticker.id
-    ).filter(Ticker.symbol.in_(symbol))
+    if args.has_key("symbol"):
+        symbol = args.get('symbol').split(',')
+        ticker_id = Ticker.query.with_entities(
+            Ticker.id
+        ).filter(Ticker.symbol.in_(symbol))
 
 
-    # build boolean for query
-    bools = (
-        Price.ticker_id.in_(ticker_id),
-    )
+        # build boolean for query
+        bools += Price.ticker_id.in_(ticker_id),
+
 
     # get keys and columns to compare
     columns = PRICE_COLUMNS
@@ -102,7 +156,6 @@ def get_price_filters(args):
 
 def get_context(func):
     def wrapper(*args,**kwargs):
-        # get a context for execution
         from run import app
         with app.app_context():
             return func(*args,**kwargs)
@@ -134,10 +187,8 @@ def get_tickers():
 def update_logs(end_date,task_id):
     UpdatesLog.update_log(end_date,task_id)
 
-
 @get_context
 def get_dates(on_commit=False):
-
 
     # date 1 date log
     date_1 = datetime.now() - timedelta(1)
@@ -230,6 +281,7 @@ def modify_prices(df,tkids):
     df.columns = df.columns.str.replace(" ","_")
     return df
 
+
 @get_context
 def upload_prices(df):
 
@@ -261,6 +313,7 @@ def update_prices(tickers, start_date, end_date):
         result = {"errors": 1, "message":exception}
 
     return result
+
 
 def get_env(var_name):
     try:
@@ -302,8 +355,23 @@ def get_url(service):
             port=get_env("MEMCACHED_PORT")
         )
         url="postgresql://{host}:{port}".format(**params)
+    elif service is "testing":
+        params = dict(db_path=TMP_PATH)
+        url="sqlite:///{db_path}".format(**params)
 
     return url
+
+def get_test_config():
+    test_config = {}
+    if "pytest" in sys.modules:
+        test_config = {
+            "TESTING": True,
+            "DATABASE": TMP_PATH,
+            "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+            "SQLALCHEMY_DATABASE_URI":get_url("testing")
+        }
+    return test_config
+
 
 @get_context
 def prune_expired_tokens():

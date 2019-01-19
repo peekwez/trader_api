@@ -144,5 +144,5 @@ class TickerReader(object):
 
 
 tickers = TickerReader(
-    "http://localhost:5000/trader/api/v1/tickers"
+    "http://localhost:5000/data/api/v1/tickers"
 )

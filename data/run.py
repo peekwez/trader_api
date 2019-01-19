@@ -9,7 +9,8 @@ from celery import Celery
 
 from extensions import db, jwt
 from models import TokenBlackList
-from utils import get_env
+from utils import get_env, get_test_config
+
 
 def make_celery(app):
     celery = Celery(
@@ -29,7 +30,8 @@ def make_celery(app):
     return celery
 
 
-def create_app(test_config=None):
+
+def create_app():
 
     # initialize flask app
     app = Flask(__name__)
@@ -37,19 +39,22 @@ def create_app(test_config=None):
         SECRET_KEY=get_env("SECRET_KEY"),
         JWT_SECRET_KEY=get_env("JWT_SECRET_KEY")
     )
-    if test_config is None:
-        app.config.from_pyfile("config.py",silent=True)
-        # register api
-        from app import trader
-        app.register_blueprint(
-            trader,
-            url_prefix= app.config["URL_PREFIX"]
-        )
-    else:
+    app.config.from_pyfile("config.py",silent=True)
+
+    # check if testing mode
+    test_config = get_test_config()
+    if test_config:
         app.config.update(test_config)
 
 
-    # babel
+    # register api
+    from app import data
+    app.register_blueprint(
+        data,
+        url_prefix= app.config["URL_PREFIX"]
+    )
+
+    # initialize babel
     babel = Babel(app)
 
     # initialize db
@@ -70,6 +75,7 @@ celery = make_celery(app)
 @jwt.token_in_blacklist_loader
 def check_if_token_revoked(decoded_token):
     return TokenBlackList.is_revoked(decoded_token)
+
 
 # start app
 if __name__ == "__main__":

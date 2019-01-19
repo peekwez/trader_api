@@ -1,6 +1,6 @@
 version: '3'
 networks:
-  trader:
+  data:
 
 services:
   # postgreSQL database
@@ -10,7 +10,7 @@ services:
     ports:
       - "5431:5432"
     networks:
-      - trader
+      - data
 
   # redis server
   redis:
@@ -18,7 +18,7 @@ services:
     ports:
       - "6378:6379"
     networks:
-      - trader
+      - data
 
   # memcached server
   memcached:
@@ -26,7 +26,7 @@ services:
     ports:
       - "11210:11211"
     networks:
-      - trader
+      - data
 
   # rabbitmq server
   rabbit:
@@ -35,7 +35,7 @@ services:
       - "5671:5672"
       - "15671:15672" # rabbitmq management plugin
     networks:
-      - trader
+      - data
 
   # flask development server
   dev:
@@ -56,7 +56,7 @@ services:
       - redis
       - memcached
     networks:
-      - trader
+      - data
 
   # chausette/circus service for flask app, celery, beat, flower
   app:

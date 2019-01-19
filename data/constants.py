@@ -3,7 +3,7 @@
 from models import Price, Ticker
 
 import datetime
-
+import tempfile
 
 OPERATORS = (
     "__eq",
@@ -13,12 +13,19 @@ OPERATORS = (
     "__lte",
 )
 
+AGGREGATORS = (
+    "avg__",
+    "min__",
+    "max__",
+)
+
 TICKER_COLUMNS = {
     "symbol": Ticker.symbol.in_,
     "sector": Ticker.sector.like,
     "industry": Ticker.sector.like,
     "market": Ticker.market.in_,
     "type": Ticker.type.in_,
+    "exchange": Ticker.exchange.in_,
 }
 
 PRICE_COLUMNS = {
@@ -29,6 +36,7 @@ PRICE_COLUMNS = {
     "close":Price.open,
     "adj_close":Price.adj_close,
     "volume":Price.volume,
+    "dollar_volume":Price.dollar_volume,
 }
 
 UPDATE_TIME = datetime.time(7,30,0)
@@ -54,9 +62,11 @@ VALUATION_LIMIT = {
     "tmx": CA_LIMIT,
 }
 
-BANNER  = "\n  Trader Ipython Shell\n"
+BANNER  = "\n  Trader-Data Ipython Shell\n"
 BANNER += 25*"-" + "\n"
 BANNER += " App     :: app, db, jwt, ma \n"
 BANNER += " Models  :: Ticker, Price, UpdatesLog, User, TokenBlackList \n"
 BANNER += " Tasks   :: add_prices, add_ticker_prices \n"
 BANNER += " Modules :: utils \n"
+
+TMP_FD, TMP_PATH = tempfile.mkstemp()

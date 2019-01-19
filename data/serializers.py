@@ -31,7 +31,7 @@ class PriceSchema(ma.Schema):
         fields  = (
             "date","open","high",
             "low","close","adj_close",
-            "volume"
+            "volume","dollar_volume"
         )
         ordered =  True
 

@@ -7,8 +7,8 @@ from resources.ticker import TickerResource
 from resources.price import PriceResource
 from resources import user
 
-trader = Blueprint('trader',__name__)
-api = Api(trader)
+data = Blueprint('data',__name__)
+api = Api(data)
 
 api.add_resource(Home,'/info')
 

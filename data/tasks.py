@@ -40,10 +40,10 @@ def add_prices(self,tickers,start_date,end_date):
         elif result["errors"] > 0:
             raise  PricesUpdateFailed(result["message"])
 
-    except (EmptyDataFrameException) as error:
-        raise self.retry(exc=error, max_retries=5)
+    except (ReturnedEmptyData) as error:
+        raise self.retry(exc=error, max_retries=10)
 
-    except (UpdateDabaseException) as error:
+    except (PricesUpdateFailed) as error:
         logger.error(error)
 
     else:

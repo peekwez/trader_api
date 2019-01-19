@@ -1,4 +1,3 @@
-option?=
 host?=localhost
 port?=5000
 
@@ -50,17 +49,17 @@ process-logs:
 # docker compose services
 dep-services:
 	$(call _info, Starting dependency services)
-	docker-compose -p trader up -d db redis rabbit memcached
+	docker-compose -p data up -d db redis rabbit memcached
 
 web-services: dep-services
 	$(call _info, Starting app and web servers)
 	cp requirements.txt services/app/
-	docker-compose -p trader up -d app web
+	docker-compose -p data up -d app web
 
 dev-services: dep-services
 	$(call _info, Starting development server)
 	cp requirements.txt services/app/
-	docker-compose -p trader up dev
+	docker-compose -p data up dev
 
 # process manager
 circus: process-logs
@@ -99,7 +98,7 @@ worker:
 
 beat:
 	$(call _info, Starting celery beat)
-	celery beat -A tasks.app -l info
+	celery beat -A tasks.app -l info --pidfile='logs/beat.pid'
 
 
 # database commands
@@ -164,5 +163,4 @@ removecache:
 	rm -fr .cache
 
 killports:
-	sudo fuser -k 5000/tcp 5001/tcp 5002/tcp \
-	5003/tcp 5004/tcp 5555/tcp
+	sudo fuser -k 5000/tcp 5001/tcp 5002/tcp 5003/tcp 5004/tcp 5555/tcp

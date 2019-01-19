@@ -9,13 +9,14 @@ from constants import UPDATE_TIME
 import utils
 
 # app config
-APP_NAME = "trader"
+APP_NAME = "data"
 VERSION = "v1"
 URL_PREFIX = "/{0}/api/{1}".format(
     APP_NAME, VERSION
 )
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 JSON_SORT_KEYS = False
+PROPAGATE_EXCEPTIONS = True
 
 
 # jwt config
@@ -56,7 +57,7 @@ CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
-
+CELERYBEAT_SCHEDULE_FILENAME = "logs/beat.schedule"
 CELERYBEAT_SCHEDULE = {
     "daily-update": {
         "task": "tasks.add_chunked_prices",

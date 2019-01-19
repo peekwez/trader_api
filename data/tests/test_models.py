@@ -3,14 +3,14 @@
 import sqlite3
 
 import pytest
-import extensions as ext
+import utils
+from extensions import db
 
-
-def test_user(user):
+def test_user(user,app):
     assert not user.is_admin
 
 def test_admin(admin):
     assert admin.is_admin
 
 def test_tickers(tickers):
-    pass
+    assert len(tickers) > 0
