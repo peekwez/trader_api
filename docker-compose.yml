@@ -37,27 +37,6 @@ services:
     networks:
       - data
 
-  # flask development server
-  dev:
-    restart: always
-    build:
-      context: ./services/app
-      dockerfile: Dockerfile
-    command: ./run_dev.sh
-    environment:
-      - FLASK_ENV=development
-    volumes:
-      - .:/app
-    ports:
-      - "5001:5000"
-    depends_on:
-      - db
-      - rabbit
-      - redis
-      - memcached
-    networks:
-      - data
-
   # chausette/circus service for flask app, celery, beat, flower
   app:
     restart: always

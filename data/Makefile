@@ -1,7 +1,7 @@
 host?=localhost
 port?=5000
 
-include Makefile.in
+include ../Make.in
 
 help:
 	@echo "Choose 'make <target>' where target is one of the following:"
@@ -9,7 +9,6 @@ help:
 	@echo "----------------------------"
 	@echo " setup         Start docker services, create database and log files"
 	@echo " process-logs  Create log files"
-	@echo " dep-services  Start postgres, redis, rabbitmq and memcahced docker services"
 	@echo " flower        Start celery flower on port 5012"
 	@echo " notebook      Start ipython notebook on port 5011"
 	@echo " worker        Start celery worker"
@@ -31,37 +30,14 @@ help:
 #	$(call _info, Running unit tests)
 #	py.test -vv --cov-config=setup.cfg --cov=src $(test_db) src
 
-
-# setup application
-setup: web-services database process-logs
-
-
-# create log files
+# circus process manager create log files
 process-logs:
 	$(call _info, Creating log files)
 	rm -fr logs; \
 	mkdir -p logs; cd logs; \
-	touch flower.log beat.log worker.log \
-	app.log dev.log circus.log book.log \
-	pgadmin.log access.log error.log
+	touch beat.log worker.log \
+	app.log circus.log
 
-
-# docker compose services
-dep-services:
-	$(call _info, Starting dependency services)
-	docker-compose -p data up -d db redis rabbit memcached
-
-web-services: dep-services
-	$(call _info, Starting app and web servers)
-	cp requirements.txt services/app/
-	docker-compose -p data up -d app web
-
-dev-services: dep-services
-	$(call _info, Starting development server)
-	cp requirements.txt services/app/
-	docker-compose -p data up dev
-
-# process manager
 circus: process-logs
 	$(call _info, Starting circus watchers)
 	circusd circus.ini --daemon --log-level info --log-output logs/circus.log
@@ -78,7 +54,7 @@ stopall:
 	$(call _info, Stoping all circus watchers)
 	circusctl stop
 
-# watcher commands
+# app commands
 chaussette:
 	$(call _info, Starting app server with Chaussette)
 	chaussette --port=5000 --backend meinheld run.app --log-level=info
@@ -87,10 +63,6 @@ flower:
 	$(call _info, Starting celery flower on port 5012)
 	celery flower -A tasks.app -l info --port=5012 --pool gevent
 
-
-notebook:
-	$(call _info, Starting jupyter notebook on port 5011)
-	jupyter-notebook --port=5011
 
 worker:
 	$(call _info, Starting celery worker)
