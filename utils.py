@@ -2,7 +2,6 @@
 
 import os
 import sys
-import tempfile
 
 from sqlalchemy import func, and_
 from extensions import db
@@ -10,7 +9,7 @@ from extensions import db
 from models import Price, Ticker, UpdatesLog, TokenBlackList
 from constants import (OPERATORS, PRICE_COLUMNS,
                        TICKER_COLUMNS, UPDATE_TIME,
-                       TMP_FD, TMP_PATH, AGGREGATORS)
+                       TMP_PATH, AGGREGATORS)
 
 from pandas_datareader import data as pdr
 from datetime import datetime, timedelta
@@ -66,7 +65,7 @@ def add_ticker_params(parser):
 
 def comp(a,b,ops):
 
-    # compare filters
+    # interface for sql operators for filtering
     if ops == "gte":
         return a >= b
     elif ops == "gt":
@@ -81,6 +80,7 @@ def comp(a,b,ops):
 
 def agg_comp(agg):
 
+    # interface for sql aggregator functions
     if agg == "avg":
         return func.avg
     elif agg == "min":
@@ -229,7 +229,6 @@ def get_dates(on_commit=False):
 def fetch_prices(symbols,start_date,end_date):
 
     # get prices from yahoo finance
-    names = ','.join(symbols)
     errors = 0
     message = []
     df = []
@@ -293,6 +292,7 @@ def upload_prices(df):
         index=False,chunksize=10000
     )
 
+
 def update_prices(tickers, start_date, end_date):
 
     # fetch date
@@ -302,6 +302,7 @@ def update_prices(tickers, start_date, end_date):
         result = {"errors":err, "message": msg}
         return result
 
+    # get prices if no errors
     tkids = {sym:tkid for tkid,sym in tickers}
     df = modify_prices(df,tkids)
 
@@ -315,6 +316,8 @@ def update_prices(tickers, start_date, end_date):
 
 
 def get_env(var_name):
+
+    # get environment variable
     try:
         return os.environ[var_name]
     except KeyError:
@@ -323,6 +326,8 @@ def get_env(var_name):
 
 
 def get_url(service):
+
+    # get address for services supporting app
     if service is "rabbit":
         params = dict(
             user=get_env("RABBIT_USER"),
@@ -364,6 +369,8 @@ def get_url(service):
     return url
 
 def get_test_config():
+
+    # get config for testing
     test_config = {}
     if "pytest" in sys.modules:
         test_config = {
@@ -377,7 +384,8 @@ def get_test_config():
 
 @get_context
 def prune_expired_tokens():
-
+    
+    # remove expired tokens
     now = datetime.now()
     expired = TokenBlackList.query.filter(
         TokenBlackList.expires < now
@@ -385,4 +393,3 @@ def prune_expired_tokens():
     if expired:
         for token in expired:
             db.session.delete(token)
-        db.session.commit()

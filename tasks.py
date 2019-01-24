@@ -1,6 +1,5 @@
 # _*_ coding: utf-8 -*-
 
-from flask import Flask
 from celery.utils.log import get_task_logger
 
 from trader import celery as app

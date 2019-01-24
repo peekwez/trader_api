@@ -1,7 +1,6 @@
 # _*_ coding: utf-8 -*-
 
-from flask import Flask
-from marshmallow import fields, post_dump, validate
+from marshmallow import fields, validate
 
 from extensions import ma
 

@@ -9,7 +9,7 @@ from constants import UPDATE_TIME
 import utils
 
 # app config
-APP_NAME = "data"
+APP_NAME = "trader"
 VERSION = "v1"
 URL_PREFIX = "/{0}/api/{1}".format(
     APP_NAME, VERSION
