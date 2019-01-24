@@ -1,6 +1,5 @@
 # _*_ coding: utf-8 -*-
 
-from flask import Flask
 from flask_babel import lazy_gettext as _
 from sqlalchemy_utils import ChoiceType, EmailType
 from sqlalchemy.orm import column_property
@@ -235,6 +234,9 @@ class User(db.Model):
 class NoResultFound(Exception):
     pass
 
+class TokenNotFound(Exception):
+    pass
+
 def _epoch_utc_to_datetime(epoch_utc):
     return datetime.fromtimestamp(epoch_utc)
 
@@ -281,4 +283,4 @@ class TokenBlackList(db.Model):
             token.revoked = True
             db.session.commit()
         except NoResultFound:
-            raise TokenNotFound("Could not find the token {0}".format(token_id))
+            raise TokenNotFound("Could not find the token {0}".format(jti))

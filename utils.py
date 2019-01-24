@@ -326,10 +326,13 @@ def get_env(var_name):
 def get_url(service):
     if service is "rabbit":
         params = dict(
+            user=get_env("RABBIT_USER"),
+            password=get_env("RABBIT_PASS"),
             host=get_env("RABBIT_HOST"),
-            port=get_env("RABBIT_PORT")
+            port=get_env("RABBIT_PORT"),
+            vhost=get_env("RABBIT_VHOST")
         )
-        url="amqp://{host}:{port}".format(**params)
+        url="amqp://{user}:{password}@{host}:{port}/{vhost}".format(**params)
 
     elif service is "postgres":
         params = dict(
