@@ -1,6 +1,6 @@
 version: '3'
 networks:
-  data:
+  trader:
 
 services:
   # postgreSQL database
@@ -10,7 +10,7 @@ services:
     ports:
       - "5431:5432"
     networks:
-      - data
+      - trader
 
   # redis server
   redis:
@@ -18,7 +18,7 @@ services:
     ports:
       - "6378:6379"
     networks:
-      - data
+      - trader
 
   # memcached server
   memcached:
@@ -26,7 +26,7 @@ services:
     ports:
       - "11210:11211"
     networks:
-      - data
+      - trader
 
   # rabbitmq server
   rabbit:
@@ -35,19 +35,19 @@ services:
       - "5671:5672"
       - "15671:15672" # rabbitmq management plugin
     networks:
-      - data
+      - trader
 
   # chausette/circus service for flask app, celery, beat, flower
   app:
     restart: always
     build:
-      context: ./services/app
+      context: ./docker/app
       dockerfile: Dockerfile
     command: ./run_app.sh
     environment:
       - FLASK_ENV=production
     volumes:
-      - .:/app
+      - .:./
     ports:
       - "5000:5000"
       - "5080:5080"
@@ -61,11 +61,11 @@ services:
   web:
     restart: always
     build:
-      context: ./services/web
+      context: ./docker/nginx
       dockerfile: Dockerfile
     ports:
       - "80:80"
     depends_on:
       - app
     volumes:
-      - ./:app
+      - .:./

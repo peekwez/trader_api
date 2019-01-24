@@ -22,7 +22,7 @@ AGGREGATORS = (
 TICKER_COLUMNS = {
     "symbol": Ticker.symbol.in_,
     "sector": Ticker.sector.like,
-    "industry": Ticker.sector.like,
+    "industry": Ticker.industry.like,
     "market": Ticker.market.in_,
     "type": Ticker.type.in_,
     "exchange": Ticker.exchange.in_,
@@ -33,7 +33,7 @@ PRICE_COLUMNS = {
     "open":Price.open,
     "low":Price.low,
     "high":Price.high,
-    "close":Price.open,
+    "close":Price.close,
     "adj_close":Price.adj_close,
     "volume":Price.volume,
     "dollar_volume":Price.dollar_volume,
