@@ -3,7 +3,7 @@
 from flask import Flask
 from celery.utils.log import get_task_logger
 
-from run import celery as app
+from trader import celery as app
 from utils import (get_chunks, get_dates, update_logs,
                    get_tickers, update_prices, prune_expired_tokens)
 

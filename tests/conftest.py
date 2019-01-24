@@ -10,10 +10,8 @@ from constants import TMP_FD, TMP_PATH
 
 @pytest.fixture(scope="session")
 def app():
-    from run import app
+    from trader import app
     yield app
-    os.close(TMP_FD)
-    os.unlink(TMP_PATH)
 
 
 @pytest.fixture(scope="session")

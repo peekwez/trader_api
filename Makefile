@@ -57,7 +57,7 @@ stopall:
 # app commands
 chaussette:
 	$(call _info, Starting app server with Chaussette)
-	chaussette --port=5000 --backend meinheld run.app --log-level=info
+	chaussette --port=5000 --backend meinheld trader.app --log-level=info
 
 flower:
 	$(call _info, Starting celery flower on port 5012)

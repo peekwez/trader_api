@@ -4,7 +4,6 @@ import os
 import sys
 import tempfile
 
-from flask import Flask
 from sqlalchemy import func, and_
 from extensions import db
 
@@ -156,7 +155,7 @@ def get_price_filters(args):
 
 def get_context(func):
     def wrapper(*args,**kwargs):
-        from run import app
+        from trader import app
         with app.app_context():
             return func(*args,**kwargs)
     return wrapper

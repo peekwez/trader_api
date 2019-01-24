@@ -6,7 +6,7 @@ from flask_script import Manager, Shell, Server, prompt, prompt_pass
 from flask_migrate import Migrate, MigrateCommand
 from flask_jwt_extended import create_access_token, create_refresh_token
 
-from run import app
+from trader import app
 from extensions import db, jwt, ma
 from models import Ticker, Price, UpdatesLog, User, TokenBlackList
 from tasks import add_prices, add_chunked_prices
