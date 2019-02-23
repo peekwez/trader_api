@@ -1,9 +1,11 @@
 # _*_ coding: utf-8 -*-
 
-from models import Price, Ticker
-
 import datetime
 import tempfile
+
+from models import Price, Ticker
+
+
 
 OPERATORS = (
     "__eq",

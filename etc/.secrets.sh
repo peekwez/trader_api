@@ -14,8 +14,8 @@ export POSTGRES_PASS='password'
 export RABBIT_HOST=$HOSTNAME
 export RABBIT_PORT='5672'
 export RABBIT_VHOST='trader'
-export RABBIT_USER='rabbitmq'
-export RABBIT_PASS='rabbitmq'
+export RABBIT_USER='rabbit'
+export RABBIT_PASS='password'
 
 export REDIS_HOST=$HOSTNAME
 export REDIS_PORT='6379'

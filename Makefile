@@ -31,14 +31,14 @@ help:
 #	py.test -vv --cov-config=setup.cfg --cov=src $(test_db) src
 
 # circus process manager create log files
-process-logs:
+createlogs:
 	$(call _info, Creating log files)
 	rm -fr logs; \
 	mkdir -p logs; cd logs; \
 	touch beat.log worker.log \
 	app.log circus.log
 
-circus: process-logs
+circus: createlogs
 	$(call _info, Starting circus watchers)
 	circusd circus.ini --daemon --log-level info --log-output logs/circus.log
 
@@ -135,4 +135,4 @@ removecache:
 	rm -fr .cache
 
 killports:
-	sudo fuser -k 5000/tcp 5001/tcp 5002/tcp 5003/tcp 5004/tcp 5555/tcp
+	sudo fuser -k 5000/tcp 5554/tcp

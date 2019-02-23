@@ -328,7 +328,7 @@ def get_env(var_name):
 def get_url(service):
 
     # get address for services supporting app
-    if service is "rabbit":
+    if service == "rabbit-broker":
         params = dict(
             user=get_env("RABBIT_USER"),
             password=get_env("RABBIT_PASS"),
@@ -338,7 +338,7 @@ def get_url(service):
         )
         url="amqp://{user}:{password}@{host}:{port}/{vhost}".format(**params)
 
-    elif service is "postgres":
+    elif service == "postgres":
         params = dict(
             user=get_env("POSTGRES_USER"),
             password=get_env("POSTGRES_PASS"),
@@ -348,7 +348,7 @@ def get_url(service):
         )
         url="postgresql://{user}:{password}@{host}:{port}/{db}".format(**params)
 
-    elif service is "redis":
+    elif service == "redis-backend":
         params = dict(
             host=get_env("REDIS_HOST"),
             port=get_env("REDIS_PORT"),
@@ -356,13 +356,21 @@ def get_url(service):
         )
         url="redis://{host}:{port}/{db}".format(**params)
 
-    elif service is "memcached":
+    elif service == "redis-broker":
+        params = dict(
+            host=get_env("REDIS_HOST"),
+            port=get_env("REDIS_PORT"),
+            db=get_env("REDIS_DB"),
+        )
+        url="redis://{host}:{port}/0".format(**params)
+
+    elif service == "memcached":
         params = dict(
             host=get_env("MEMCACHED_HOST"),
             port=get_env("MEMCACHED_PORT")
         )
         url="postgresql://{host}:{port}".format(**params)
-    elif service is "testing":
+    elif service == "testing":
         params = dict(db_path=TMP_PATH)
         url="sqlite:///{db_path}".format(**params)
 
@@ -384,7 +392,7 @@ def get_test_config():
 
 @get_context
 def prune_expired_tokens():
-    
+
     # remove expired tokens
     now = datetime.now()
     expired = TokenBlackList.query.filter(

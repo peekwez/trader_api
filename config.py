@@ -39,7 +39,7 @@ BABEL_DEFAULT_TIMEZONE = "est"
 BROKER_POOL_LIMIT = 1
 BROKER_CONNECTION_TIMEOUT = 10
 
-CELERY_BROKER_URL = utils.get_url("rabbit")
+CELERY_BROKER_URL = utils.get_url("redis-broker")
 CELERY_DEFAULT_QUEUE = "default"
 CELERY_QUEUES = (
     Queue("default", Exchange("default"), routing_key="default"),
@@ -50,7 +50,7 @@ CELERY_TIMEZONE = "EST"
 CELERY_TRACK_STARTED = True
 CELERY_SEND_EVENTS = True
 
-CELERY_RESULT_BACKEND = utils.get_url("redis")
+CELERY_RESULT_BACKEND = utils.get_url("redis-backend")
 CELERY_TASK_RESULT_EXPIRES = 60*5 # 5 minutes
 CELERY_REDIS_MAX_CONNECTIONS = 10
 CELERY_ACCEPT_CONTENT = ["application/json"]

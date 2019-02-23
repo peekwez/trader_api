@@ -15,7 +15,7 @@ api.add_resource(Home,'/info')
 # user and authentication resources
 api.add_resource(user.UserRegister,"/register")
 api.add_resource(user.UserLogin,"/login")
-api.add_resource(user.UserLogoutAcess,"/logout/access")
+api.add_resource(user.UserLogoutAccess,"/logout/access")
 api.add_resource(user.UserLogoutRefresh,"/logout/refresh")
 api.add_resource(user.TokenRefresh,"/token/refresh")
 api.add_resource(user.UserResource,"/users","/users")

@@ -115,7 +115,7 @@ class UserLogin(Resource):
 
 
 
-class UserLogoutAcess(Resource):
+class UserLogoutAccess(Resource):
 
     @jwt_required
     def post(self):
