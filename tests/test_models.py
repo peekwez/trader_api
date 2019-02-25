@@ -4,7 +4,6 @@ import sqlite3
 
 import pytest
 import utils
-from extensions import db
 
 def test_user(user,app):
     assert not user.is_admin

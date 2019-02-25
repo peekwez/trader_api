@@ -1,5 +1,6 @@
 host?=localhost
 port?=5001
+market?=CA
 
 include Make.in
 
@@ -29,6 +30,11 @@ help:
 #tests: removecache
 #	$(call _info, Running unit tests)
 #	py.test -vv --cov-config=setup.cfg --cov=src $(test_db) src
+
+# update backtest database
+backdata:
+	$(call _info, Updating backtest data bundles)
+	cd backtest && ./add_bundle.sh $market
 
 # circus process manager create log files
 createlogs:
