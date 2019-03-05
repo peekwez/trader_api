@@ -34,7 +34,7 @@ help:
 # update backtest database
 backdata:
 	$(call _info, Updating backtest data bundles)
-	cd backtest && ./add_bundle.sh $market
+	cd backtest && ./add_bundle.sh $(market)
 
 # circus process manager create log files
 createlogs:
